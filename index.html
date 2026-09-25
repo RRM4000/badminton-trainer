@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Spvg Steinhagen - Footwork Trainer</title>
+    <style>
+        /* CORE STYLES & THEMING */
+        :root {
+            --red: #E3000F; /* Spvg Steinhagen Red */
+            --white: #FFFFFF;
+            --black: #111111;
+            --gray: #F0F0F0;
+        }
+        
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+        
+        body { 
+            background-color: var(--white); 
+            color: var(--black); 
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+            min-height: 100vh;
+            padding: 10px;
+        }
+
+        .app-container {
+            width: 100%;
+            max-width: 400px; /* Mobile constraint */
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        /* HEADER */
+        .header { text-align: center; margin-bottom: 10px; }
+        .header img { max-height: 60px; object-fit: contain; }
+        .header h1 { font-size: 1.2rem; color: var(--red); margin-top: 5px; text-transform: uppercase; }
+
+        /* CONTROLS SECTION */
+        .controls {
+            background-color: var(--gray);
+            padding: 15px;
+            border-radius: 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        
+        .control-group { display: flex; flex-direction: column; gap: 5px; }
+        .control-group label { font-size: 0.9rem; font-weight: bold; }
+        
+        input[type="range"] { accent-color: var(--red); width: 100%; }
+        select { padding: 8px; border: 1px solid #ccc; border-radius: 5px; font-size: 1rem; }
+
+        .btn-group { display: flex; gap: 10px; margin-top: 5px; }
+        button {
+            flex: 1;
+            padding: 12px;
+            font-size: 1rem;
+            font-weight: bold;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            color: var(--white);
+            text-transform: uppercase;
+        }
+        .btn-start { background-color: var(--red); }
+        .btn-pause { background-color: #FFA500; }
+        .btn-stop { background-color: var(--black); }
+        
+        button:active { opacity: 0.8; }
+        button:disabled { background-color: #cccccc; cursor: not-allowed; }
+
+        /* COURT VISUALIZATION */
+        .court-container {
+            position: relative;
+            width: 100%;
+            aspect-ratio: 1 / 1.1; /* Approximate half court ratio */
+            background-color: #e5f1e3;
+            border: 4px solid var(--black);
+            margin: 0 auto;
+        }
+
+        /* Court Lines */
+        .line-center { position: absolute; left: 50%; top: 0; bottom: 0; width: 2px; background: var(--black); transform: translateX(-50%); }
+        .line-service { position: absolute; left: 0; right: 0; top: 30%; height: 2px; background: var(--black); }
+        .line-back { position: absolute; left: 0; right: 0; bottom: 10%; height: 2px; background: var(--black); }
+        .line-side-l { position: absolute; left: 10%; top: 0; bottom: 0; width: 2px; background: var(--black); }
+        .line-side-r { position: absolute; right: 10%; top: 0; bottom: 0; width: 2px; background: var(--black); }
+
+        /* 6 Corners Grid */
+        .court-grid {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            grid-template-rows: 1fr 1fr 1fr;
+            z-index: 10;
+        }
+
+        .corner {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+            font-weight: bold;
+            color: rgba(0,0,0,0.1);
+            transition: all 0.1s ease;
+        }
+
+        .corner.active {
+            background-color: rgba(227, 0, 15, 0.6); /* Red flash */
+            color: var(--white);
+        }
+
+        /* OVERLAYS (Countdown & Completion) */
+        .overlay {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(255,255,255,0.9);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            z-index: 20;
+        }
+
+        .countdown-text { font-size: 6rem; font-weight: bold; color: var(--red); }
+        .geschafft-text { font-size: 3rem; font-weight: bold; color: var(--red); text-transform: uppercase; text-align: center; }
+        
+        /* CONFETTI ANIMATION */
+        .confetti {
+            position: absolute;
+            width: 10px;
+            height: 10px;
+            background-color: var(--red);
+            animation: fall linear forwards;
+        }
+        @keyframes fall {
+            to { transform: translateY(100vh) rotate(720deg); }
+        }
+    </style>
+</head>
+<body>
+
+<div class="app-container">
+    
+    <!-- Header -->
+    <div class="header">
+        <img src="logo.png" alt="Spvg Steinhagen Logo" onerror="this.style.display='none'">
+        <h1>Footwork Trainer</h1>
+    </div>
+
+    <!-- Controls -->
+    <div class="controls">
+        <div class="control-group">
+            <label for="intervalSlider">Intervall: <span id="intervalVal">3.0</span> Sekunden</label>
+            <input type="range" id="intervalSlider" min="1.0" max="6.0" step="0.5" value="3.0">
+        </div>
+
+        <div class="control-group">
+            <label for="durationSlider">Gesamtdauer: <span id="durationVal">60</span> Sekunden</label>
+            <input type="range" id="durationSlider" min="30" max="300" step="30" value="60">
+        </div>
+
+        <div class="control-group">
+            <label for="drillMode">Modus:</label>
+            <select id="drillMode">
+                <option value="random">Zufall (Offensiv & Defensiv)</option>
+                <option value="offensiv">Nur Offensiv</option>
+                <option value="defensiv">Nur Defensiv</option>
+            </select>
+        </div>
+
+        <div class="btn-group">
+            <button class="btn-start" id="btnStart" onclick="startDrill()">Start</button>
+            <button class="btn-pause" id="btnPause" onclick="pauseDrill()" disabled>Pause</button>
+            <button class="btn-stop" id="btnStop" onclick="stopDrill()" disabled>Stop</button>
+        </div>
+    </div>
+
+    <!-- Court Visualization -->
+    <div class="court-container" id="courtContainer">
+        <!-- Lines -->
+        <div class="line-center"></div>
+        <div class="line-service"></div>
+        <div class="line-back"></div>
+        <div class="line-side-l"></div>
+        <div class="line-side-r"></div>
+
+        <!-- Interactive Zones -->
+        <div class="court-grid">
+            <div class="corner" id="zone-vorne-links">1</div>
+            <div class="corner" id="zone-vorne-rechts">2</div>
+            <div class="corner" id="zone-mitte-links">3</div>
+            <div class="corner" id="zone-mitte-rechts">4</div>
+            <div class="corner" id="zone-hinten-links">5</div>
+            <div class="corner" id="zone-hinten-rechts">6</div>
+        </div>
+
+        <!-- Overlays -->
+        <div class="overlay" id="overlay">
+            <div id="overlayContent" class="countdown-text">3</div>
+        </div>
+    </div>
+
+</div>
+
+<script>
+    // --- VARIABLES & STATE ---
+    let intervalTimer = null;
+    let durationTimer = null;
+    let remainingTime = 0;
+    let isPaused = false;
+    
+    let wakeLock = null;
+    let audioContext = null;
+    let currentAudio = null;
+
+    const corners = [
+        "vorne-links", "vorne-rechts", 
+        "mitte-links", "mitte-rechts", 
+        "hinten-links", "hinten-rechts"
+    ];
+
+    // --- DOM ELEMENTS ---
+    const intervalSlider = document.getElementById("intervalSlider");
+    const intervalVal = document.getElementById("intervalVal");
+    const durationSlider = document.getElementById("durationSlider");
+    const durationVal = document.getElementById("durationVal");
+    const drillMode = document.getElementById("drillMode");
+    
+    const btnStart = document.getElementById("btnStart");
+    const btnPause = document.getElementById("btnPause");
+    const btnStop = document.getElementById("btnStop");
+    
+    const overlay = document.getElementById("overlay");
+    const overlayContent = document.getElementById("overlayContent");
+    const courtContainer = document.getElementById("courtContainer");
+
+    // --- EVENT LISTENERS FOR SLIDERS ---
+    intervalSlider.addEventListener("input", (e) => intervalVal.innerText = parseFloat(e.target.value).toFixed(1));
+    durationSlider.addEventListener("input", (e) => durationVal.innerText = e.target.value);
+
+    // --- WAKE LOCK API ---
+    async function requestWakeLock() {
+        try {
+            if ('wakeLock' in navigator) {
+                wakeLock = await navigator.wakeLock.request('screen');
+            }
+        } catch (err) {
+            console.log(`Wake Lock error: ${err.name}, ${err.message}`);
+        }
+    }
+    
+    function releaseWakeLock() {
+        if (wakeLock !== null) {
+            wakeLock.release().then(() => wakeLock = null);
+        }
+    }
+
+    // --- AUDIO SYSTEM ---
+    function initAudioContext() {
+        // Unlock Web Audio API on first user interaction
+        if (!audioContext) {
+            audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        }
+        if (audioContext.state === 'suspended') {
+            audioContext.resume();
+        }
+        // Dummy HTML5 Audio unlock for strict mobile browsers
+        const dummyAudio = new Audio();
+        dummyAudio.play().catch(() => {});
+    }
+
+    function playSyntheticBuzzer() {
+        if (!audioContext) return;
+        const oscillator = audioContext.createOscillator();
+        const gainNode = audioContext.createGain();
+        
+        oscillator.type = 'square';
+        oscillator.frequency.setValueAtTime(440, audioContext.currentTime); // A4 note
+        oscillator.frequency.exponentialRampToValueAtTime(880, audioContext.currentTime + 1); // Pitch up
+        
+        gainNode.gain.setValueAtTime(1, audioContext.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 1.5);
+        
+        oscillator.connect(gainNode);
+        gainNode.connect(audioContext.destination);
+        
+        oscillator.start();
+        oscillator.stop(audioContext.currentTime + 1.5);
+    }
+
+    function playCornerAudio(corner, mode) {
+        // Stop currently playing audio immediately to handle fast intervals
+        if (currentAudio) {
+            currentAudio.pause();
+            currentAudio.currentTime = 0;
+        }
+
+        let selectedMode = mode;
+        if (mode === "random") {
+            selectedMode = Math.random() < 0.5 ? "offensiv" : "defensiv";
+        }
+
+        const fileName = `audio/${corner}-${selectedMode}.mp3`;
+        currentAudio = new Audio(fileName);
+        currentAudio.play().catch(e => console.log("Audio playback failed. Missing file?", fileName));
+    }
+
+    // --- VISUAL LOGIC ---
+    function flashCorner(corner) {
+        // Clear all active classes first
+        corners.forEach(c => document.getElementById(`zone-${c}`).classList.remove("active"));
+        
+        // Add active class to new corner
+        const activeZone = document.getElementById(`zone-${corner}`);
+        activeZone.classList.add("active");
+        
+        // Remove after 500ms
+        setTimeout(() => {
+            activeZone.classList.remove("active");
+        }, 500);
+    }
+
+    function generateConfetti() {
+        for (let i = 0; i < 50; i++) {
+            const confetti = document.createElement("div");
+            confetti.classList.add("confetti");
+            confetti.style.left = Math.random() * 100 + "%";
+            confetti.style.animationDuration = (Math.random() * 2 + 2) + "s";
+            confetti.style.backgroundColor = Math.random() < 0.5 ? "#E3000F" : "#111111"; // Red or Black
+            courtContainer.appendChild(confetti);
+            
+            // Cleanup confetti
+            setTimeout(() => confetti.remove(), 4000);
+        }
+    }
+
+    // --- DRILL LOGIC ---
+    function executeCall() {
+        const randomCorner = corners[Math.floor(Math.random() * corners.length)];
+        const currentMode = drillMode.value;
+        
+        flashCorner(randomCorner);
+        playCornerAudio(randomCorner, currentMode);
+    }
+
+    function startDrill() {
+        if (isPaused) {
+            resumeDrill();
+            return;
+        }
+
+        initAudioContext();
+        requestWakeLock();
+
+        btnStart.disabled = true;
+        btnPause.disabled = true;
+        btnStop.disabled = false;
+        
+        intervalSlider.disabled = true;
+        durationSlider.disabled = true;
+        drillMode.disabled = true;
+
+        remainingTime = parseInt(durationSlider.value);
+        
+        // Visual Countdown 3-2-1
+        overlay.style.display = "flex";
+        overlayContent.className = "countdown-text";
+        
+        let count = 3;
+        overlayContent.innerText = count;
+        
+        const countdownInterval = setInterval(() => {
+            count--;
+            if (count > 0) {
+                overlayContent.innerText = count;
+            } else {
+                clearInterval(countdownInterval);
+                overlay.style.display = "none";
+                beginMainLoop();
+            }
+        }, 1000);
+    }
+
+    function beginMainLoop() {
+        btnPause.disabled = false;
+        isPaused = false;
+        
+        // Execute immediately on start, then start interval
+        executeCall(); 
+        
+        const intervalMs = parseFloat(intervalSlider.value) * 1000;
+        
+        intervalTimer = setInterval(() => {
+            executeCall();
+        }, intervalMs);
+
+        durationTimer = setInterval(() => {
+            remainingTime--;
+            durationVal.innerText = remainingTime;
+            
+            if (remainingTime <= 0) {
+                finishDrill();
+            }
+        }, 1000);
+    }
+
+    function pauseDrill() {
+        isPaused = true;
+        clearInterval(intervalTimer);
+        clearInterval(durationTimer);
+        btnStart.disabled = false;
+        btnStart.innerText = "Weiter";
+        btnPause.disabled = true;
+        releaseWakeLock();
+    }
+
+    function resumeDrill() {
+        btnStart.disabled = true;
+        btnStart.innerText = "Start";
+        btnPause.disabled = false;
+        requestWakeLock();
+        beginMainLoop();
+    }
+
+    function stopDrill() {
+        clearInterval(intervalTimer);
+        clearInterval(durationTimer);
+        isPaused = false;
+        
+        if(currentAudio) {
+            currentAudio.pause();
+            currentAudio.currentTime = 0;
+        }
+
+        corners.forEach(c => document.getElementById(`zone-${c}`).classList.remove("active"));
+        
+        durationVal.innerText = durationSlider.value;
+        btnStart.disabled = false;
+        btnStart.innerText = "Start";
+        btnPause.disabled = true;
+        btnStop.disabled = true;
+        
+        intervalSlider.disabled = false;
+        durationSlider.disabled = false;
+        drillMode.disabled = false;
+        
+        overlay.style.display = "none";
+        releaseWakeLock();
+    }
+
+    function finishDrill() {
+        stopDrill();
+        
+        // Final celebration sequence
+        playSyntheticBuzzer();
+        generateConfetti();
+        
+        overlay.style.display = "flex";
+        overlayContent.className = "geschafft-text";
+        overlayContent.innerText = "Geschafft!";
+        
+        setTimeout(() => {
+            overlay.style.display = "none";
+        }, 4000); // Hide after 4 seconds
+    }
+</script>
+</body>
+</html>
