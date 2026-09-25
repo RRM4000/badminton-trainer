@@ -1,15 +1,19 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="de">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Spvg Steinhagen - Footwork Trainer</title>
-	<!-- PWA & App Meta Tags -->
-<meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black">
-<meta name="apple-mobile-web-app-title" content="Steinhagen Trainer">
-<link rel="apple-touch-icon" href="logo.png">
+
+    <!-- PWA & App Meta Tags -->
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black">
+    <meta name="apple-mobile-web-app-title" content="Steinhagen Trainer">
+    <meta name="theme-color" content="#E3000F">
+    <link rel="apple-touch-icon" href="logo.png">
+    <link rel="manifest" href="manifest.json">
+
     <style>
         /* CORE STYLES & THEMING */
         :root {
@@ -215,6 +219,14 @@
 </div>
 
 <script>
+    // --- SERVICE WORKER REGISTRATION (FOR CHROME INSTALL) ---
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register('sw.js')
+                .catch(err => console.log('Service Worker Registrierung fehlgeschlagen:', err));
+        });
+    }
+
     // --- VARIABLES & STATE ---
     let intervalTimer = null;
     let durationTimer = null;
@@ -269,14 +281,12 @@
 
     // --- AUDIO SYSTEM ---
     function initAudioContext() {
-        // Unlock Web Audio API on first user interaction
         if (!audioContext) {
             audioContext = new (window.AudioContext || window.webkitAudioContext)();
         }
         if (audioContext.state === 'suspended') {
             audioContext.resume();
         }
-        // Dummy HTML5 Audio unlock for strict mobile browsers
         const dummyAudio = new Audio();
         dummyAudio.play().catch(() => {});
     }
@@ -287,8 +297,8 @@
         const gainNode = audioContext.createGain();
         
         oscillator.type = 'square';
-        oscillator.frequency.setValueAtTime(440, audioContext.currentTime); // A4 note
-        oscillator.frequency.exponentialRampToValueAtTime(880, audioContext.currentTime + 1); // Pitch up
+        oscillator.frequency.setValueAtTime(440, audioContext.currentTime);
+        oscillator.frequency.exponentialRampToValueAtTime(880, audioContext.currentTime + 1);
         
         gainNode.gain.setValueAtTime(1, audioContext.currentTime);
         gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 1.5);
@@ -301,7 +311,6 @@
     }
 
     function playCornerAudio(corner, mode) {
-        // Stop currently playing audio immediately to handle fast intervals
         if (currentAudio) {
             currentAudio.pause();
             currentAudio.currentTime = 0;
@@ -319,14 +328,11 @@
 
     // --- VISUAL LOGIC ---
     function flashCorner(corner) {
-        // Clear all active classes first
         corners.forEach(c => document.getElementById(`zone-${c}`).classList.remove("active"));
         
-        // Add active class to new corner
         const activeZone = document.getElementById(`zone-${corner}`);
         activeZone.classList.add("active");
         
-        // Remove after 500ms
         setTimeout(() => {
             activeZone.classList.remove("active");
         }, 500);
@@ -338,10 +344,9 @@
             confetti.classList.add("confetti");
             confetti.style.left = Math.random() * 100 + "%";
             confetti.style.animationDuration = (Math.random() * 2 + 2) + "s";
-            confetti.style.backgroundColor = Math.random() < 0.5 ? "#E3000F" : "#111111"; // Red or Black
+            confetti.style.backgroundColor = Math.random() < 0.5 ? "#E3000F" : "#111111";
             courtContainer.appendChild(confetti);
             
-            // Cleanup confetti
             setTimeout(() => confetti.remove(), 4000);
         }
     }
@@ -374,7 +379,6 @@
 
         remainingTime = parseInt(durationSlider.value);
         
-        // Visual Countdown 3-2-1
         overlay.style.display = "flex";
         overlayContent.className = "countdown-text";
         
@@ -397,7 +401,6 @@
         btnPause.disabled = false;
         isPaused = false;
         
-        // Execute immediately on start, then start interval
         executeCall(); 
         
         const intervalMs = parseFloat(intervalSlider.value) * 1000;
@@ -463,7 +466,6 @@
     function finishDrill() {
         stopDrill();
         
-        // Final celebration sequence
         playSyntheticBuzzer();
         generateConfetti();
         
@@ -473,7 +475,7 @@
         
         setTimeout(() => {
             overlay.style.display = "none";
-        }, 4000); // Hide after 4 seconds
+        }, 4000);
     }
 </script>
 </body>
