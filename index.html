@@ -17,7 +17,8 @@
     <style>
         /* CORE STYLES & THEMING */
         :root {
-            --red: #E3000F; /* Spvg Steinhagen Red */
+            --red: #E3000F;    /* Spvg Steinhagen Red / Offensiv */
+            --blue: #0056B3;   /* Defensiv Blue */
             --white: #FFFFFF;
             --black: #111111;
             --gray: #F0F0F0;
@@ -117,11 +118,17 @@
             font-size: 2rem;
             font-weight: bold;
             color: rgba(0,0,0,0.1);
-            transition: all 0.1s ease;
+            transition: background-color 0.1s ease;
         }
 
-        .corner.active {
-            background-color: rgba(227, 0, 15, 0.6); /* Red flash */
+        /* AKTIONEN: OFFENSIV (ROT) & DEFENSIV (BLAU) */
+        .corner.active-offensiv {
+            background-color: rgba(227, 0, 15, 0.7); /* Rot */
+            color: var(--white);
+        }
+
+        .corner.active-defensiv {
+            background-color: rgba(0, 86, 179, 0.7); /* Blau */
             color: var(--white);
         }
 
@@ -316,26 +323,26 @@
             currentAudio.currentTime = 0;
         }
 
-        let selectedMode = mode;
-        if (mode === "random") {
-            selectedMode = Math.random() < 0.5 ? "offensiv" : "defensiv";
-        }
-
-        const fileName = `audio/${corner}-${selectedMode}.mp3`;
+        const fileName = `audio/${corner}-${mode}.mp3`;
         currentAudio = new Audio(fileName);
         currentAudio.play().catch(e => console.log("Audio playback failed. Missing file?", fileName));
     }
 
     // --- VISUAL LOGIC ---
-    function flashCorner(corner) {
-        corners.forEach(c => document.getElementById(`zone-${c}`).classList.remove("active"));
+    function flashCorner(corner, mode) {
+        // Vorherige Hervorhebungen auf allen Feldern zurücksetzen
+        corners.forEach(c => {
+            const el = document.getElementById(`zone-${c}`);
+            el.classList.remove("active-offensiv", "active-defensiv");
+        });
         
+        // Neues Feld in der passenden Farbe aktivieren (bleibt aktiv bis zum nächsten Aufruf)
         const activeZone = document.getElementById(`zone-${corner}`);
-        activeZone.classList.add("active");
-        
-        setTimeout(() => {
-            activeZone.classList.remove("active");
-        }, 500);
+        if (mode === "offensiv") {
+            activeZone.classList.add("active-offensiv");
+        } else if (mode === "defensiv") {
+            activeZone.classList.add("active-defensiv");
+        }
     }
 
     function generateConfetti() {
@@ -344,7 +351,7 @@
             confetti.classList.add("confetti");
             confetti.style.left = Math.random() * 100 + "%";
             confetti.style.animationDuration = (Math.random() * 2 + 2) + "s";
-            confetti.style.backgroundColor = Math.random() < 0.5 ? "#E3000F" : "#111111";
+            confetti.style.backgroundColor = Math.random() < 0.5 ? "#E3000F" : "#0056B3";
             courtContainer.appendChild(confetti);
             
             setTimeout(() => confetti.remove(), 4000);
@@ -354,9 +361,14 @@
     // --- DRILL LOGIC ---
     function executeCall() {
         const randomCorner = corners[Math.floor(Math.random() * corners.length)];
-        const currentMode = drillMode.value;
+        let currentMode = drillMode.value;
         
-        flashCorner(randomCorner);
+        // Bei Zufall entscheiden, ob Offensiv oder Defensiv
+        if (currentMode === "random") {
+            currentMode = Math.random() < 0.5 ? "offensiv" : "defensiv";
+        }
+        
+        flashCorner(randomCorner, currentMode);
         playCornerAudio(randomCorner, currentMode);
     }
 
@@ -447,7 +459,11 @@
             currentAudio.currentTime = 0;
         }
 
-        corners.forEach(c => document.getElementById(`zone-${c}`).classList.remove("active"));
+        // Alle aktiven Farbfelder löschen
+        corners.forEach(c => {
+            const el = document.getElementById(`zone-${c}`);
+            el.classList.remove("active-offensiv", "active-defensiv");
+        });
         
         durationVal.innerText = durationSlider.value;
         btnStart.disabled = false;
